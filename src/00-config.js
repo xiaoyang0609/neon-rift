@@ -42,7 +42,7 @@ var STAGES = [
 var WEAPONS = [
   {
     id: 'pulse', name: '脉冲', en: 'PULSE', desc: '均衡 · 射速快',
-    interval: 0.105, dmg: 1, speed: 940, r: 3.4, life: 0.9,
+    interval: 0.1, dmg: 1, speed: 940, r: 3.4, life: 0.9,
     count: 1, spread: 0, pierce: 0, color: '#7fe7ff',
     stats: [3, 4, 3]
   },
