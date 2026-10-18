@@ -99,3 +99,5 @@ git push -u origin feature/your-idea
 - `neonrift.best.v2`：总最高分
 - `neonrift.stagebest.v1`：每关最高分
 - `neonrift.loadout.v1`：上次选择的关卡与射击模式
+## 反馈
+问题请开 Issue。
