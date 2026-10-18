@@ -28,13 +28,13 @@ body {
 .iconbtn:hover { border-color: rgba(90, 220, 255, .7); color: #eaf6ff; background: rgba(14, 40, 66, .75); }
 .iconbtn:active { transform: scale(.94); }
 
-#settings, #upgrades {
+#settings, #upgrades, #install {
   position: fixed; inset: 0; z-index: 40;
   display: flex; align-items: center; justify-content: center;
   background: rgba(2, 5, 10, .66); backdrop-filter: blur(6px);
   padding: 20px;
 }
-#settings.hidden, #upgrades.hidden { display: none; }
+#settings.hidden, #upgrades.hidden, #install.hidden { display: none; }
 .panel {
   width: min(560px, 100%); max-height: 84vh; overflow-y: auto;
   background: linear-gradient(160deg, rgba(10, 26, 44, .96), rgba(5, 12, 22, .97));
@@ -81,6 +81,12 @@ body {
   margin-bottom: 8px;
 }
 .shards b { font-size: 22px; letter-spacing: .04em; color: #ffd166; font-weight: 700; }
+.guide { font-size: 13px; line-height: 1.9; color: rgba(205, 235, 250, .85); }
+.guide p { margin: 8px 0; }
+.guide b { color: #7fe7ff; }
+.guide ol { padding-left: 20px; margin: 6px 0; }
+.guide li { margin: 4px 0; }
+.guide .muted { color: rgba(150, 200, 230, .55); font-size: 12px; }
 .panel-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .panel-foot button {
   padding: 9px 18px; border-radius: 9px; cursor: pointer; font-family: inherit;

@@ -41,13 +41,13 @@ body {
 .iconbtn:hover { border-color: rgba(90, 220, 255, .7); color: #eaf6ff; background: rgba(14, 40, 66, .75); }
 .iconbtn:active { transform: scale(.94); }
 
-#settings, #upgrades {
+#settings, #upgrades, #install {
   position: fixed; inset: 0; z-index: 40;
   display: flex; align-items: center; justify-content: center;
   background: rgba(2, 5, 10, .66); backdrop-filter: blur(6px);
   padding: 20px;
 }
-#settings.hidden, #upgrades.hidden { display: none; }
+#settings.hidden, #upgrades.hidden, #install.hidden { display: none; }
 .panel {
   width: min(560px, 100%); max-height: 84vh; overflow-y: auto;
   background: linear-gradient(160deg, rgba(10, 26, 44, .96), rgba(5, 12, 22, .97));
@@ -94,6 +94,12 @@ body {
   margin-bottom: 8px;
 }
 .shards b { font-size: 22px; letter-spacing: .04em; color: #ffd166; font-weight: 700; }
+.guide { font-size: 13px; line-height: 1.9; color: rgba(205, 235, 250, .85); }
+.guide p { margin: 8px 0; }
+.guide b { color: #7fe7ff; }
+.guide ol { padding-left: 20px; margin: 6px 0; }
+.guide li { margin: 4px 0; }
+.guide .muted { color: rgba(150, 200, 230, .55); font-size: 12px; }
 .panel-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .panel-foot button {
   padding: 9px 18px; border-radius: 9px; cursor: pointer; font-family: inherit;
@@ -131,6 +137,7 @@ body {
 <div id="fx"></div>
 
 <div id="topbar">
+  <button id="btn-install" class="iconbtn" title="安装到桌面 / 手机">⤓</button>
   <button id="btn-upgrades" class="iconbtn" title="强化">✦</button>
   <button id="btn-pause" class="iconbtn" title="暂停">⏸</button>
   <button id="btn-settings" class="iconbtn" title="设置">⚙</button>
@@ -154,6 +161,16 @@ body {
     <div id="upgrade-body"></div>
     <div class="panel-foot">
       <button id="btn-upgrade-close" class="primary">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="install" class="hidden">
+  <div class="panel">
+    <h2>安装 <span>INSTALL</span></h2>
+    <div id="install-body" class="guide"></div>
+    <div class="panel-foot">
+      <button id="btn-install-close" class="primary">知道了</button>
     </div>
   </div>
 </div>
@@ -2803,7 +2820,11 @@ var elUpgradesBtn = document.getElementById('btn-upgrades');
 var elUpgrades = document.getElementById('upgrades');
 var elUpgradeBody = document.getElementById('upgrade-body');
 var elShardCount = document.getElementById('shard-count');
+var elInstall = document.getElementById('install');
+var elInstallBtn = document.getElementById('btn-install');
+var elInstallBody = document.getElementById('install-body');
 var toastTimer = null;
+var deferredInstall = null;
 
 function showToast(msg) {
   if (!elToast) return;
@@ -2892,6 +2913,64 @@ function buildUpgradePanel() {
   elUpgradeBody.innerHTML = h;
 }
 
+function isStandalone() {
+  try {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  } catch (e) {}
+  return typeof navigator !== 'undefined' && navigator.standalone === true;
+}
+
+function isIOS() {
+  var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (typeof navigator !== 'undefined' && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isAndroid() {
+  var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  return /Android/i.test(ua);
+}
+
+function buildInstallGuide() {
+  if (!elInstallBody) return;
+  var h = '';
+  if (isStandalone()) {
+    h = '<p>你已经在独立窗口里运行了，不需要再安装。</p>';
+  } else if (isIOS()) {
+    h = '<p>iPhone / iPad 请用 <b>Safari</b> 打开本页：</p>' +
+      '<ol><li>点底部「分享」按钮</li><li>选择「添加到主屏幕」</li><li>确认名称后点「添加」</li></ol>' +
+      '<p class="muted">首次打开需要联网缓存，之后可以离线启动。</p>';
+  } else if (isAndroid()) {
+    h = '<p>Android 请用 <b>Chrome / Edge</b> 打开本页：</p>' +
+      '<ol><li>点右上角 <b>⋮</b> 菜单</li><li>选「安装应用」或「添加到主屏幕」</li><li>确认安装</li></ol>' +
+      '<p class="muted">如果菜单里没有安装项，说明当前是微信 / QQ 等内置浏览器，请点右上角「在浏览器打开」后再试。</p>';
+  } else {
+    h = '<p>桌面浏览器：</p>' +
+      '<ol><li>看地址栏右侧有没有 <b>安装图标</b>（显示器 + 向下箭头）</li><li>或打开浏览器菜单 →「应用」→「安装此站点」</li><li>Chrome 也可以 ⋮ →「保存并分享」→「安装页面为应用」</li></ol>' +
+      '<p class="muted">安装后会出现在开始菜单 / 应用程序里，以独立窗口运行。</p>';
+  }
+  elInstallBody.innerHTML = h;
+}
+
+function updateInstallEntry() {
+  if (elInstallBtn) elInstallBtn.style.display = isStandalone() ? 'none' : '';
+}
+
+function promptInstall() {
+  if (isStandalone()) {
+    showToast('已经在独立窗口中运行');
+    return;
+  }
+  if (deferredInstall && typeof deferredInstall.prompt === 'function') {
+    deferredInstall.prompt();
+    var choice = deferredInstall.userChoice;
+    deferredInstall = null;
+    if (choice && choice.then) choice.then(function () { updateInstallEntry(); });
+    return;
+  }
+  openPanel('install');
+}
+
 function openPanel(kind) {
   settingsWasPlaying = state === 'play';
   uiModal = true;
@@ -2899,6 +2978,9 @@ function openPanel(kind) {
   if (kind === 'settings') {
     if (elSettings) elSettings.classList.remove('hidden');
     buildSettingsPanel();
+  } else if (kind === 'install') {
+    if (elInstall) elInstall.classList.remove('hidden');
+    buildInstallGuide();
   } else {
     if (elUpgrades) elUpgrades.classList.remove('hidden');
     buildUpgradePanel();
@@ -2915,6 +2997,7 @@ function closeModal() {
   rebindAction = null;
   if (elSettings) elSettings.classList.add('hidden');
   if (elUpgrades) elUpgrades.classList.add('hidden');
+  if (elInstall) elInstall.classList.add('hidden');
   if (settingsWasPlaying && state === 'pause') state = 'play';
   settingsWasPlaying = false;
   clearInput();
@@ -2987,6 +3070,25 @@ function initUI() {
     sfx('pickup');
   });
   if (elSettingsBtn) elSettingsBtn.addEventListener('click', function () { openSettings(); });
+  if (elInstallBtn) elInstallBtn.addEventListener('click', function () {
+    if (uiModal) return;
+    promptInstall();
+  });
+  var btnInstallClose = document.getElementById('btn-install-close');
+  if (btnInstallClose) btnInstallClose.addEventListener('click', function () { closeModal(); });
+
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    deferredInstall = event;
+    updateInstallEntry();
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredInstall = null;
+    updateInstallEntry();
+    showToast('安装完成，可以从桌面图标启动');
+  });
+  updateInstallEntry();
+
   if (elUpgradesBtn) elUpgradesBtn.addEventListener('click', function () {
     if (uiModal) return;
     openUpgrades();
@@ -3049,6 +3151,8 @@ function menuPointer(x, y) {
       sfx('pickup');
     } else if (r.kind === 'start') {
       startGame(menuStage, menuWeapon);
+    } else if (r.kind === 'install') {
+      promptInstall();
     }
     return;
   }
@@ -3258,6 +3362,15 @@ function drawTitle() {
     '   →   ' + (selStage.endless ? '活下去' : '目标 ' + selStage.bossName) +
     '   ·   结晶 ' + progress.shards,
     W / 2, by + bh + 24 * sc);
+
+  // 安装入口（独立窗口运行时隐藏）
+  if (!isStandalone()) {
+    var installY = by + bh + 48 * sc;
+    g.font = '600 ' + Math.round(10.5 * sc) + 'px ' + FONT;
+    g.fillStyle = 'rgba(120,220,255,0.62)';
+    g.fillText('安装到桌面 / 手机  ⤓', W / 2, installY);
+    menuRects.push({ kind: 'install', x: W / 2 - 90, y: installY - 12 * sc, w: 180, h: 22 * sc });
+  }
 
   // ----- footer -----
   g.fillStyle = 'rgba(150,210,240,0.45)';
