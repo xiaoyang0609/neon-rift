@@ -7,7 +7,7 @@
 ## 0. 先认识仓库
 
 ```
-neon-rift/
+D:\裂隙空间/
 ├─ index.html        ← 构建产物（单文件游戏，直接双击就能玩）
 ├─ build.mjs         ← 构建脚本
 ├─ src/              ← 真正的源码，按编号顺序拼接
@@ -41,7 +41,7 @@ neon-rift/
 
 ## 2. 先看看现在的状态
 
-在仓库根目录（`neon-rift`）打开 PowerShell：
+在仓库根目录（`D:\裂隙空间`）打开 PowerShell：
 
 ```bash
 git status

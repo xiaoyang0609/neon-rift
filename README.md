@@ -65,7 +65,7 @@ neon-rift/
 node build.mjs
 ```
 
-会生成仓库根目录的 `index.html`（约 93 KB），同时在上一级目录复制一份 `neon-rift.html` 方便本地预览。
+会生成仓库根目录的 `index.html`（约 93 KB）。双击它就能玩。
 
 改完源码记得重新构建，并把 `src/` 和 `index.html` 一起提交。
 
