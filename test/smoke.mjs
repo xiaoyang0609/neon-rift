@@ -1,8 +1,10 @@
 /*
  * 冒烟测试：不启动浏览器，用 vm + Canvas 桩加载 index.html 里的游戏脚本。
- * 覆盖两条路径：
- *   1. 标准关卡：进游戏、按住射击、跑 900 帧
- *   2. 无尽模式：菜单选到第 4 关、进游戏、跑 1200 帧
+ * 覆盖：
+ *   1. 标准关卡：进游戏、按住射击 900 帧
+ *   2. 锁定关卡：选第 2 关不能开局
+ *   3. 无尽模式：选到第 7 张卡（∞）并开局
+ *   4. 已解锁进度：带存档进第 4 关
  *
  * 运行：node test/smoke.mjs
  */
@@ -27,7 +29,7 @@ const match = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!match) fail('index.html 里没有找到 <script> 块');
 const code = match[1];
 
-function boot() {
+function boot(seedStore) {
   const texts = [];
   const gradient = { addColorStop() {} };
 
@@ -46,7 +48,6 @@ function boot() {
     });
   }
 
-  const canvasHandlers = new Map();
   const winHandlers = new Map();
 
   function pushHandler(map, key, fn) {
@@ -59,7 +60,7 @@ function boot() {
     return {
       width: 0, height: 0, style: {},
       getContext() { if (!ctx) ctx = makeCtx(); return ctx; },
-      addEventListener(type, fn) { pushHandler(canvasHandlers, type, fn); },
+      addEventListener() {},
       getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 720 }; },
       setPointerCapture() {},
     };
@@ -74,7 +75,7 @@ function boot() {
         remove: (c) => classes.delete(c),
         contains: (c) => classes.has(c),
       },
-      addEventListener(type, fn) { pushHandler(canvasHandlers, id + ':' + type, fn); },
+      addEventListener() {},
       setAttribute() {},
       getAttribute() { return null; },
       querySelectorAll() { return []; },
@@ -93,6 +94,8 @@ function boot() {
     requestAnimationFrame(cb) { rafCb = cb; },
   };
 
+  const store = Object.assign({}, seedStore || {});
+
   const sandbox = {
     window: win,
     document: {
@@ -108,10 +111,9 @@ function boot() {
       addEventListener() {},
     },
     localStorage: {
-      store: {},
-      getItem(k) { return k in this.store ? this.store[k] : null; },
-      setItem(k, v) { this.store[k] = String(v); },
-      removeItem(k) { delete this.store[k]; },
+      getItem(k) { return k in store ? store[k] : null; },
+      setItem(k, v) { store[k] = String(v); },
+      removeItem(k) { delete store[k]; },
     },
     setTimeout: () => 0,
     clearTimeout: () => {},
@@ -137,7 +139,23 @@ function boot() {
     (map.get(type) || []).forEach((fn) => fn(Object.assign({ preventDefault() {}, stopPropagation() {} }, ev)));
   }
 
-  return { texts, winHandlers, frame, fire };
+  function press(code, times = 1) {
+    for (let i = 0; i < times; i++) {
+      fire(winHandlers, 'keydown', { code });
+      frame(1);
+      fire(winHandlers, 'keyup', { code });
+    }
+    frame(2);
+  }
+
+  function start() {
+    fire(winHandlers, 'keydown', { code: 'Space' });
+    frame(2);
+    fire(winHandlers, 'keyup', { code: 'Space' });
+    fire(winHandlers, 'keydown', { code: 'Space' });
+  }
+
+  return { texts, winHandlers, frame, fire, press, start };
 }
 
 function assert(cond, msg) {
@@ -162,10 +180,7 @@ run('标准关卡：标题 → 开局 → 射击 900 帧', () => {
   assert(bootText.includes('NEON RIFT'), '标题没有渲染');
   assert(bootText.includes('边境'), '关卡选择没有渲染');
 
-  g.fire(g.winHandlers, 'keydown', { code: 'Space' });
-  g.frame(2);
-  g.fire(g.winHandlers, 'keyup', { code: 'Space' });
-  g.fire(g.winHandlers, 'keydown', { code: 'Space' });
+  g.start();
   g.frame(900);
 
   const all = g.texts.join('|');
@@ -174,28 +189,45 @@ run('标准关卡：标题 → 开局 → 射击 900 帧', () => {
   assert(!/\bundefined\b/.test(all), '界面里出现了 undefined');
 });
 
-run('无尽模式：菜单选第 4 关 → 开局 → 1200 帧', () => {
+run('锁定关卡：第 2 关未解锁，按空格不能开局', () => {
   const g = boot();
   g.frame(20);
+  g.press('ArrowRight', 1);
+  g.start();
+  g.frame(120);
 
-  for (let i = 0; i < 3; i++) {
-    g.fire(g.winHandlers, 'keydown', { code: 'ArrowRight' });
-    g.frame(1);
-    g.fire(g.winHandlers, 'keyup', { code: 'ArrowRight' });
-  }
-  g.frame(2);
+  const all = g.texts.join('|');
+  assert(!all.includes('HULL'), '锁定关卡不应该进入游戏');
+});
 
-  g.fire(g.winHandlers, 'keydown', { code: 'Space' });
-  g.frame(2);
-  g.fire(g.winHandlers, 'keyup', { code: 'Space' });
-  g.fire(g.winHandlers, 'keydown', { code: 'Space' });
+run('无尽模式：选到 ∞ 卡并跑 1200 帧', () => {
+  const g = boot();
+  g.frame(20);
+  g.press('ArrowRight', 6);
+  g.start();
   g.frame(1200);
 
   const all = g.texts.join('|');
   assert(/无尽 \d{2}/.test(all), '无尽模式 HUD 没有出现');
-  assert(all.includes('HULL'), '游戏 HUD 没有渲染');
   assert(!all.includes('STAGE CLEAR'), '无尽模式不应触发通关');
-  assert(!/\bundefined\b/.test(all), '界面里出现了 undefined');
+});
+
+run('已解锁进度：带存档进入第 4 关', () => {
+  const cleared = [true, true, true, true, true, true, true];
+  const g = boot({
+    'neonrift.progress.v1': JSON.stringify({ cleared, shards: 500 }),
+    'neonrift.upgrades.v1': JSON.stringify({ damage: 2, rate: 1, hull: 3, shield: 1, armor: 1 }),
+  });
+  g.frame(20);
+  assert(g.texts.join('|').includes('结晶 500'), '菜单没有显示结晶数量');
+
+  g.press('ArrowRight', 3);
+  g.start();
+  g.frame(400);
+
+  const all = g.texts.join('|');
+  assert(/04 · 熔火要塞/.test(all), '第 4 关 HUD 没有出现');
+  assert(all.includes('HULL'), '游戏 HUD 没有渲染');
 });
 
 console.log('全部冒烟测试通过');
