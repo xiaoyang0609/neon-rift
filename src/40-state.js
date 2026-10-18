@@ -7,6 +7,10 @@ var time = 0;
 var score = 0;
 var best = loadBest();
 var bestByStage = loadStageBest();
+var progress = loadProgress();
+var upgrades = loadUpgrades();
+var clearReward = 0;
+var clearFirst = false;
 var menuStage = 0;
 var menuWeapon = 0;
 var stageIndex = 0;
@@ -78,6 +82,91 @@ function loadStageBest() {
 
 function saveStageBest() {
   try { localStorage.setItem(SAVE_STAGEBEST_KEY, JSON.stringify(bestByStage)); } catch (e) {}
+}
+
+function defaultUpgrades() {
+  var o = {};
+  for (var i = 0; i < UPGRADES.length; i++) o[UPGRADES[i].id] = 0;
+  return o;
+}
+
+function loadUpgrades() {
+  var u = defaultUpgrades();
+  try {
+    var raw = localStorage.getItem(SAVE_UPGRADE_KEY);
+    if (raw) {
+      var o = JSON.parse(raw) || {};
+      for (var i = 0; i < UPGRADES.length; i++) {
+        var def = UPGRADES[i];
+        u[def.id] = clamp(o[def.id] | 0, 0, def.max);
+      }
+    }
+  } catch (e) {}
+  return u;
+}
+
+function saveUpgrades() {
+  try { localStorage.setItem(SAVE_UPGRADE_KEY, JSON.stringify(upgrades)); } catch (e) {}
+}
+
+function loadProgress() {
+  var p = { cleared: STAGES.map(function () { return false; }), shards: 0 };
+  try {
+    var raw = localStorage.getItem(SAVE_PROGRESS_KEY);
+    if (raw) {
+      var o = JSON.parse(raw) || {};
+      if (o.cleared) {
+        for (var i = 0; i < STAGES.length; i++) p.cleared[i] = !!o.cleared[i];
+      }
+      p.shards = Math.max(0, o.shards | 0);
+    }
+  } catch (e) {}
+
+  // 迁移：以前拿过分数的关卡视为已通关
+  for (var j = 0; j < STAGES.length; j++) {
+    if (bestByStage[j] > 0) p.cleared[j] = true;
+  }
+  p.cleared[STAGES.length - 1] = true; // 无尽常驻解锁
+  return p;
+}
+
+function saveProgress() {
+  try { localStorage.setItem(SAVE_PROGRESS_KEY, JSON.stringify(progress)); } catch (e) {}
+}
+
+function isStageUnlocked(i) {
+  var st = STAGES[i];
+  if (!st) return false;
+  if (st.endless) return true;
+  if (i === 0) return true;
+  return !!progress.cleared[i - 1];
+}
+
+function isStageCleared(i) { return !!progress.cleared[i]; }
+
+function upgradeCost(def) {
+  var lv = upgrades[def.id] || 0;
+  return Math.round(def.cost * Math.pow(def.growth, lv));
+}
+
+function canBuyUpgrade(def) {
+  return (upgrades[def.id] || 0) < def.max && progress.shards >= upgradeCost(def);
+}
+
+function buyUpgrade(id) {
+  var def = null;
+  for (var i = 0; i < UPGRADES.length; i++) {
+    if (UPGRADES[i].id === id) { def = UPGRADES[i]; break; }
+  }
+  if (!def) return false;
+  if ((upgrades[id] || 0) >= def.max) return false;
+  var cost = upgradeCost(def);
+  if (progress.shards < cost) return false;
+  progress.shards -= cost;
+  upgrades[id] = (upgrades[id] || 0) + 1;
+  saveProgress();
+  saveUpgrades();
+  return true;
 }
 
 function loadLoadout() {
@@ -162,6 +251,11 @@ function recycleAll() {
 function startGame(si, wi) {
   if (typeof si === 'number') menuStage = clamp(si | 0, 0, STAGES.length - 1);
   if (typeof wi === 'number') menuWeapon = clamp(wi | 0, 0, WEAPONS.length - 1);
+  if (!isStageUnlocked(menuStage)) {
+    if (typeof showToast === 'function') showToast('先通关上一关才能解锁');
+    sfx('hurt');
+    return;
+  }
   stageIndex = menuStage;
   stageCfg = STAGES[stageIndex];
   weaponCfg = WEAPONS[menuWeapon];
@@ -175,17 +269,20 @@ function startGame(si, wi) {
   deadTimer = 0;
   clearTimer = 0;
   clearNewBest = false;
+  clearReward = 0;
+  clearFirst = false;
   banner = 0; bannerText = '';
   player.x = VW / 2;
   player.y = VH * 0.72;
   player.vx = 0; player.vy = 0;
-  player.hp = player.maxHp = 100;
+  player.maxHp = 100 + (upgrades.hull || 0) * 10;
+  player.hp = player.maxHp;
   player.aim = -Math.PI / 2;
   player.fireCd = 0.35;
   player.dashCd = 0; player.dashT = 0;
   player.invuln = 1.4;
   player.rapid = 0; player.triple = 0;
-  player.shield = 0;
+  player.shield = upgrades.shield || 0;
   player.shots = 0;
   player.hitDirs.length = 0;
   pointer.aimLock = true;
@@ -218,6 +315,14 @@ function stageClear() {
   if (score > bestByStage[stageIndex]) bestByStage[stageIndex] = score;
   if (score > best) { best = score; saveBest(best); }
   saveStageBest();
+
+  // 结算奖励：首通给全额 + 20，重复通关给 30%
+  clearFirst = !progress.cleared[stageIndex];
+  var base = stageCfg.reward || 0;
+  clearReward = clearFirst ? base + 20 : Math.round(base * 0.3);
+  progress.cleared[stageIndex] = true;
+  progress.shards += clearReward;
+  saveProgress();
 
   for (var i = 0; i < enemies.length; i++) {
     var e = enemies[i];
@@ -275,7 +380,8 @@ function damagePlayer(amount, sx, sy) {
     addShake(6);
     return;
   }
-  player.hp -= amount * stageCfg.dmg;
+  var armor = Math.max(0.6, 1 - (upgrades.armor || 0) * 0.04);
+  player.hp -= amount * stageCfg.dmg * armor;
   player.invuln = 1.05;
   hitFlash = 1;
   var ang = (sx == null) ? rand(0, TAU) : Math.atan2(player.y - sy, player.x - sx);

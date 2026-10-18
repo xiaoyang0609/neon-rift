@@ -53,7 +53,7 @@ function update(dt) {
 
   if (state === 'pause') {
     if (uiModal) {
-      if (pressed.has('Escape')) closeSettings();
+      if (pressed.has('Escape')) closeModal();
       pressed.clear();
       return;
     }
@@ -85,7 +85,7 @@ function update(dt) {
     updateBullets(dt);
     updateEnemyBullets(dt);
     if (clearTimer > 0.8) {
-      if (pressed.has('KeyN') && stageIndex < STAGES.length - 1) {
+      if (pressed.has('KeyN') && stageIndex + 1 < STAGES.length && !STAGES[stageIndex + 1].endless && isStageUnlocked(stageIndex + 1)) {
         startGame(stageIndex + 1, menuWeapon);
       } else if (actPressed('shoot') || pressed.has('Enter') || actPressed('pause') || pressed.has('KeyR')) {
         goMenu();
@@ -199,7 +199,7 @@ function updatePlayer(dt) {
 function shoot() {
   var w = weaponCfg;
   var rapid = player.rapid > 0;
-  player.fireCd = w.interval * (rapid ? 0.55 : 1);
+  player.fireCd = w.interval * (rapid ? 0.55 : 1) * Math.max(0.55, 1 - (upgrades.rate || 0) * 0.03);
   var extra = player.triple > 0 ? 2 : 0;
   var count = w.count + extra;
   var spread = w.spread;
@@ -214,7 +214,7 @@ function shoot() {
     b.vx = Math.cos(a) * w.speed;
     b.vy = Math.sin(a) * w.speed;
     b.r = w.r;
-    b.dmg = w.dmg;
+    b.dmg = w.dmg * (1 + (upgrades.damage || 0) * 0.08);
     b.life = w.life;
     b.color = w.color;
     b.pierceLeft = w.pierce;

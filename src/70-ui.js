@@ -10,6 +10,10 @@ var elRotate = document.getElementById('rotate');
 var elToast = document.getElementById('toast');
 var elPauseBtn = document.getElementById('btn-pause');
 var elSettingsBtn = document.getElementById('btn-settings');
+var elUpgradesBtn = document.getElementById('btn-upgrades');
+var elUpgrades = document.getElementById('upgrades');
+var elUpgradeBody = document.getElementById('upgrade-body');
+var elShardCount = document.getElementById('shard-count');
 var toastTimer = null;
 
 function showToast(msg) {
@@ -80,22 +84,67 @@ function syncSettingsUI() {
   }
 }
 
-function openSettings() {
+function buildUpgradePanel() {
+  if (!elUpgradeBody) return;
+  if (elShardCount) elShardCount.textContent = String(progress.shards);
+  var h = '';
+  for (var i = 0; i < UPGRADES.length; i++) {
+    var def = UPGRADES[i];
+    var lv = upgrades[def.id] || 0;
+    var maxed = lv >= def.max;
+    var cost = upgradeCost(def);
+    var poor = progress.shards < cost;
+    h += '<div class="row"><div class="label">' + def.name +
+      '<small>' + def.desc + ' · Lv ' + lv + '/' + def.max + '</small></div>' +
+      '<button class="bind" data-upgrade="' + def.id + '"' +
+      (maxed || poor ? ' disabled' : '') + '>' +
+      (maxed ? '已满级' : cost + ' 结晶') + '</button></div>';
+  }
+  elUpgradeBody.innerHTML = h;
+}
+
+function openPanel(kind) {
   settingsWasPlaying = state === 'play';
   uiModal = true;
   if (state === 'play') state = 'pause';
-  if (elSettings) elSettings.classList.remove('hidden');
-  buildSettingsPanel();
+  if (kind === 'settings') {
+    if (elSettings) elSettings.classList.remove('hidden');
+    buildSettingsPanel();
+  } else {
+    if (elUpgrades) elUpgrades.classList.remove('hidden');
+    buildUpgradePanel();
+  }
   clearInput();
 }
 
-function closeSettings() {
+function openSettings() { openPanel('settings'); }
+function openUpgrades() { openPanel('upgrades'); }
+
+function closeModal() {
+  if (!uiModal) return;
   uiModal = false;
   rebindAction = null;
   if (elSettings) elSettings.classList.add('hidden');
+  if (elUpgrades) elUpgrades.classList.add('hidden');
   if (settingsWasPlaying && state === 'pause') state = 'play';
   settingsWasPlaying = false;
   clearInput();
+}
+
+function closeSettings() { closeModal(); }
+
+function onUpgradeClick(e) {
+  var t = e.target;
+  if (!t || !t.getAttribute) return;
+  var id = t.getAttribute('data-upgrade');
+  if (!id) return;
+  if (buyUpgrade(id)) {
+    sfx('pickup');
+    buildUpgradePanel();
+    showToast('强化成功');
+  } else {
+    sfx('hurt');
+  }
 }
 
 function refreshSettings() {
@@ -149,6 +198,13 @@ function initUI() {
     sfx('pickup');
   });
   if (elSettingsBtn) elSettingsBtn.addEventListener('click', function () { openSettings(); });
+  if (elUpgradesBtn) elUpgradesBtn.addEventListener('click', function () {
+    if (uiModal) return;
+    openUpgrades();
+  });
+  if (elUpgradeBody) elUpgradeBody.addEventListener('click', onUpgradeClick);
+  var btnUpgradeClose = document.getElementById('btn-upgrade-close');
+  if (btnUpgradeClose) btnUpgradeClose.addEventListener('click', function () { closeModal(); });
   if (elSettingsBody) {
     elSettingsBody.addEventListener('click', onPanelClick);
     elSettingsBody.addEventListener('input', onPanelInput);
@@ -190,6 +246,11 @@ function menuPointer(x, y) {
     var r = menuRects[i];
     if (!pointIn(x, y, r.x, r.y, r.w, r.h)) continue;
     if (r.kind === 'stage') {
+      if (!isStageUnlocked(r.i)) {
+        showToast('先通关上一关才能解锁');
+        sfx('hurt');
+        return;
+      }
       menuStage = r.i;
       saveLoadout();
       sfx('pickup');
@@ -204,9 +265,36 @@ function menuPointer(x, y) {
   }
 }
 
+function drawLock(cx, cy, s, color) {
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(1.2, s * 0.16);
+  g.beginPath();
+  g.arc(cx, cy - s * 0.18, s * 0.34, Math.PI, 0);
+  g.stroke();
+  g.fillStyle = color;
+  g.fillRect(cx - s * 0.48, cy - s * 0.02, s * 0.96, s * 0.72);
+  g.fillStyle = 'rgba(6,12,20,0.9)';
+  g.beginPath();
+  g.arc(cx, cy + s * 0.26, s * 0.11, 0, TAU);
+  g.fill();
+}
+
+function drawCheck(cx, cy, s, color) {
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(1.6, s * 0.22);
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(cx - s * 0.45, cy);
+  g.lineTo(cx - s * 0.1, cy + s * 0.34);
+  g.lineTo(cx + s * 0.5, cy - s * 0.36);
+  g.stroke();
+}
+
 function drawStageCard(x, y, w, h, i, sc) {
   var st = STAGES[i];
   var sel = menuStage === i;
+  var unlocked = isStageUnlocked(i);
+  var cleared = !st.endless && isStageCleared(i);
   var hov = pointer.active && pointIn(pointer.x, pointer.y, x, y, w, h);
 
   roundRectPath(g, x, y, w, h, 10);
@@ -216,34 +304,30 @@ function drawStageCard(x, y, w, h, i, sc) {
   g.save();
   roundRectPath(g, x, y, w, h, 10);
   g.clip();
+  g.globalAlpha = unlocked ? 1 : 0.45;
 
-  // difficulty pips（无尽关用 ∞ 代替）
-  if (st.endless) {
-    g.fillStyle = st.tint;
-    g.font = '700 ' + Math.round(clamp(h * 0.14, 10, 15)) + 'px ' + FONT;
-    g.textAlign = 'right';
-    g.textBaseline = 'middle';
-    g.fillText('∞', x + w - 10, y + 13);
-  } else {
-    for (var p = 0; p < 3; p++) {
-      g.fillStyle = p <= i ? st.tint : 'rgba(255,255,255,0.12)';
-      g.fillRect(x + w - 14 - (2 - p) * 8, y + 9, 5, 5);
-    }
-  }
-
+  // 编号 / ∞
   g.textAlign = 'left';
   g.textBaseline = 'middle';
-  g.fillStyle = sel ? COL.white : 'rgba(220,240,255,0.78)';
-  g.font = '700 ' + Math.round(clamp(h * 0.22, 12, 21)) + 'px ' + FONT;
-  g.fillText(st.name, x + 12, y + h * 0.28);
+  g.fillStyle = st.tint;
+  g.font = '700 ' + Math.round(clamp(h * 0.2, 11, 17)) + 'px ' + FONT;
+  g.fillText(st.endless ? '∞' : pad2(st.num), x + 10, y + h * 0.24);
 
-  g.fillStyle = 'rgba(150,205,235,0.55)';
-  g.font = '600 ' + Math.round(clamp(h * 0.115, 7.5, 11)) + 'px ' + FONT;
-  g.fillText(st.endless ? (st.en + ' · 无限') : (st.en + ' · ' + (st.waves + 1) + ' WAVES'), x + 12, y + h * 0.55);
+  // 名称
+  g.fillStyle = sel ? COL.white : 'rgba(220,240,255,0.82)';
+  g.font = '700 ' + Math.round(clamp(h * 0.19, 10, 16)) + 'px ' + FONT;
+  g.fillText(st.name, x + 10, y + h * 0.53);
 
-  g.fillStyle = 'rgba(150,205,235,0.4)';
-  g.font = '500 ' + Math.round(clamp(h * 0.11, 7, 10.5)) + 'px ' + FONT;
-  g.fillText(bestByStage[i] ? ('最佳 ' + bestByStage[i]) : '未挑战', x + 12, y + h * 0.8);
+  // 波次 / 状态
+  g.fillStyle = 'rgba(150,205,235,0.5)';
+  g.font = '600 ' + Math.round(clamp(h * 0.105, 6.5, 9.5)) + 'px ' + FONT;
+  g.fillText(st.endless ? '无限波次' : (unlocked ? ((st.waves + 1) + ' 波') : '未解锁'),
+    x + 10, y + h * 0.79);
+
+  // 右上角状态标
+  if (!unlocked) drawLock(x + w - 15, y + 15, 8, 'rgba(190,225,245,0.75)');
+  else if (cleared) drawCheck(x + w - 15, y + 15, 8, COL.green);
+
   g.restore();
 
   roundRectPath(g, x, y, w, h, 10);
@@ -338,10 +422,10 @@ function drawTitle() {
   g.fillStyle = 'rgba(130,200,235,0.55)';
   g.fillText('选择关卡 · STAGE', W / 2, labelY);
 
-  var cardH = clamp(H * 0.155, 52, 104);
-  var gap = Math.min(14, W * 0.012);
+  var cardH = clamp(H * 0.13, 46, 86);
+  var gap = Math.min(12, W * 0.01);
   var stageCount = STAGES.length;
-  var cardW = Math.min(210, (W - 100) / stageCount - gap);
+  var cardW = Math.min(150, (W - 100) / stageCount - gap);
   var stageX = W / 2 - (cardW * stageCount + gap * (stageCount - 1)) / 2;
   var stageY = labelY + 15 * sc;
   for (var i = 0; i < STAGES.length; i++) {
@@ -378,8 +462,12 @@ function drawTitle() {
   g.font = '600 ' + Math.round(11 * sc) + 'px ' + FONT;
   g.fillStyle = 'rgba(160,220,245,0.5)';
   var selStage = STAGES[menuStage];
-  g.fillText(selStage.name + ' · ' + WEAPONS[menuWeapon].name + '   →   ' +
-    (selStage.endless ? '目标 活下去' : '目标 ' + selStage.bossName),
+  var selMeta = selStage.endless
+    ? '∞ 波'
+    : ((selStage.waves + 1) + ' 波 · 最佳 ' + pad(bestByStage[menuStage] || 0));
+  g.fillText((selStage.num ? pad2(selStage.num) + ' ' : '∞ ') + selStage.name + ' · ' + selMeta +
+    '   →   ' + (selStage.endless ? '活下去' : '目标 ' + selStage.bossName) +
+    '   ·   结晶 ' + progress.shards,
     W / 2, by + bh + 24 * sc);
 
   // ----- footer -----
@@ -460,25 +548,36 @@ function drawClear() {
   g.font = '800 ' + Math.round(Math.min(58, VW * 0.055)) + 'px ' + FONT;
   glowOn(g, COL.gold, 30);
   g.fillStyle = COL.white;
-  g.fillText('STAGE CLEAR', VW / 2, VH * 0.3);
+  g.fillText('STAGE CLEAR', VW / 2, VH * 0.27);
   glowOff(g);
 
   g.font = '700 16px ' + FONT;
   g.fillStyle = stageCfg.tint;
-  g.fillText(stageCfg.name + ' · ' + stageCfg.en, VW / 2, VH * 0.3 + 44);
+  g.fillText(pad2(stageCfg.num) + ' · ' + stageCfg.name + ' · ' + stageCfg.en, VW / 2, VH * 0.27 + 42);
 
   g.font = '700 42px ' + FONT;
   g.fillStyle = COL.white;
-  g.fillText(pad(score), VW / 2, VH * 0.46);
+  g.fillText(pad(score), VW / 2, VH * 0.42);
 
   g.font = '600 13px ' + FONT;
   g.fillStyle = clearNewBest ? COL.gold : 'rgba(170,225,250,0.65)';
-  g.fillText(clearNewBest ? 'NEW RECORD' : ('本关最佳 ' + pad(bestByStage[stageIndex] || 0)), VW / 2, VH * 0.46 + 38);
+  g.fillText(clearNewBest ? 'NEW RECORD' : ('本关最佳 ' + pad(bestByStage[stageIndex] || 0)), VW / 2, VH * 0.42 + 34);
+
+  g.font = '700 18px ' + FONT;
+  g.fillStyle = COL.gold;
+  g.fillText('+' + clearReward + ' 结晶', VW / 2, VH * 0.42 + 68);
+
+  var next = null;
+  if (stageIndex + 1 < STAGES.length && !STAGES[stageIndex + 1].endless) next = STAGES[stageIndex + 1];
+  if (clearFirst && next) {
+    g.font = '600 13px ' + FONT;
+    g.fillStyle = COL.cyan;
+    g.fillText('已解锁 ' + pad2(next.num) + ' · ' + next.name, VW / 2, VH * 0.42 + 94);
+  }
 
   g.font = '600 14px ' + FONT;
   g.fillStyle = COL.cyan;
-  var hint = stageIndex < STAGES.length - 1 ? 'N 下一关  ·  空格 / 点击 返回主界面' : '空格 / 点击 返回主界面';
-  g.fillText(hint, VW / 2, VH * 0.6);
+  g.fillText(next ? 'N 下一关  ·  空格 / 点击 返回主界面' : '空格 / 点击 返回主界面', VW / 2, VH * 0.63);
   g.restore();
 }
 
