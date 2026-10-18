@@ -30,7 +30,8 @@ const wrapped = `(function () {\n'use strict';\n${js}\n})();`;
 
 const html = template
   .replace('/*__CSS__*/', () => css)
-  .replace('/*__JS__*/', () => wrapped);
+  .replace('/*__JS__*/', () => wrapped)
+  .replace(/\r\n/g, '\n');
 
 fs.writeFileSync(repoOut, html);
 console.log('built', repoOut, (html.length / 1024).toFixed(1) + ' KB', 'from', files.length, 'modules');
