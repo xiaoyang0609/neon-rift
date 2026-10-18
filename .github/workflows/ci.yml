@@ -25,6 +25,9 @@ jobs:
       - name: Build
         run: node build.mjs
 
+      - name: Validate web manifest
+        run: node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));if(!m.icons||!m.icons.length)throw new Error('manifest 缺少图标');console.log('manifest ok:',m.name)"
+
       - name: Verify index.html is up to date
         run: |
           if ! git diff --quiet -- index.html; then
