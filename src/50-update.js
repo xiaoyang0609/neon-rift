@@ -531,7 +531,7 @@ function killEnemy(e, opts) {
     dropPickup(e.x, e.y + 30, null);
     dropPickup(e.x + 40, e.y, 'shield');
     sfx('bigkill');
-    if (wave > stageCfg.waves) {
+    if (!stageCfg.endless && wave > stageCfg.waves) {
       stageClear();
       return;
     }

@@ -11,6 +11,7 @@
 | 边境 OUTER RIM | 4 波 + Boss | DREADNOUGHT | 标准难度，环形弹幕 + 瞄准散射 |
 | 深空 DEEP FIELD | 6 波 + Boss | SENTINEL | 敌人更硬更快，双螺旋弹幕 |
 | 裂隙核心 RIFT CORE | 8 波 + Boss | RIFT CORE | 高压，三螺旋 + 大环形弹幕 |
+| 无尽 ENDLESS | 无限 | 每 5 波 RIFT CORE | 波次无限加难，比谁活得久、分更高 |
 
 每关的敌人血量、速度、数量、伤害和 Boss 血量都按关卡系数放大；Boss 半血进入 ENRAGED 二阶段。通关后可按 `N` 直接进下一关。
 

@@ -621,7 +621,9 @@ function drawHUD() {
   g.fillText('WAVE', 26, 88);
   g.fillStyle = COL.cyan;
   g.font = '700 18px ' + FONT;
-  g.fillText(stageCfg.name + ' ' + pad2(wave) + '/' + pad2(stageCfg.waves + 1), 24, 102);
+  g.fillText(stageCfg.endless
+    ? (stageCfg.name + ' ' + pad2(wave))
+    : (stageCfg.name + ' ' + pad2(wave) + '/' + pad2(stageCfg.waves + 1)), 24, 102);
 
   g.fillStyle = 'rgba(140,200,230,0.45)';
   g.font = '600 10px ' + FONT;

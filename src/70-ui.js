@@ -217,10 +217,18 @@ function drawStageCard(x, y, w, h, i, sc) {
   roundRectPath(g, x, y, w, h, 10);
   g.clip();
 
-  // difficulty pips
-  for (var p = 0; p < 3; p++) {
-    g.fillStyle = p <= i ? st.tint : 'rgba(255,255,255,0.12)';
-    g.fillRect(x + w - 14 - (2 - p) * 8, y + 9, 5, 5);
+  // difficulty pips（无尽关用 ∞ 代替）
+  if (st.endless) {
+    g.fillStyle = st.tint;
+    g.font = '700 ' + Math.round(clamp(h * 0.14, 10, 15)) + 'px ' + FONT;
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    g.fillText('∞', x + w - 10, y + 13);
+  } else {
+    for (var p = 0; p < 3; p++) {
+      g.fillStyle = p <= i ? st.tint : 'rgba(255,255,255,0.12)';
+      g.fillRect(x + w - 14 - (2 - p) * 8, y + 9, 5, 5);
+    }
   }
 
   g.textAlign = 'left';
@@ -231,7 +239,7 @@ function drawStageCard(x, y, w, h, i, sc) {
 
   g.fillStyle = 'rgba(150,205,235,0.55)';
   g.font = '600 ' + Math.round(clamp(h * 0.115, 7.5, 11)) + 'px ' + FONT;
-  g.fillText(st.en + ' · ' + (st.waves + 1) + ' WAVES', x + 12, y + h * 0.55);
+  g.fillText(st.endless ? (st.en + ' · 无限') : (st.en + ' · ' + (st.waves + 1) + ' WAVES'), x + 12, y + h * 0.55);
 
   g.fillStyle = 'rgba(150,205,235,0.4)';
   g.font = '500 ' + Math.round(clamp(h * 0.11, 7, 10.5)) + 'px ' + FONT;
@@ -332,8 +340,9 @@ function drawTitle() {
 
   var cardH = clamp(H * 0.155, 52, 104);
   var gap = Math.min(14, W * 0.012);
-  var cardW = Math.min(210, (W - 100) / 3 - gap);
-  var stageX = W / 2 - (cardW * 3 + gap * 2) / 2;
+  var stageCount = STAGES.length;
+  var cardW = Math.min(210, (W - 100) / stageCount - gap);
+  var stageX = W / 2 - (cardW * stageCount + gap * (stageCount - 1)) / 2;
   var stageY = labelY + 15 * sc;
   for (var i = 0; i < STAGES.length; i++) {
     var sx = stageX + i * (cardW + gap);
@@ -368,7 +377,9 @@ function drawTitle() {
 
   g.font = '600 ' + Math.round(11 * sc) + 'px ' + FONT;
   g.fillStyle = 'rgba(160,220,245,0.5)';
-  g.fillText(STAGES[menuStage].name + ' · ' + WEAPONS[menuWeapon].name + '   →   目标 ' + STAGES[menuStage].bossName,
+  var selStage = STAGES[menuStage];
+  g.fillText(selStage.name + ' · ' + WEAPONS[menuWeapon].name + '   →   ' +
+    (selStage.endless ? '目标 活下去' : '目标 ' + selStage.bossName),
     W / 2, by + bh + 24 * sc);
 
   // ----- footer -----
@@ -422,7 +433,7 @@ function drawDead() {
 
   g.font = '600 14px ' + FONT;
   g.fillStyle = 'rgba(170,225,250,0.7)';
-  g.fillText(stageCfg.name + ' · WAVE ' + wave + '/' + (stageCfg.waves + 1) + ' · BEST ' + pad(best), VW / 2, VH * 0.43 + 42);
+  g.fillText(stageCfg.name + ' · WAVE ' + wave + (stageCfg.endless ? '' : '/' + (stageCfg.waves + 1)) + ' · BEST ' + pad(best), VW / 2, VH * 0.43 + 42);
 
   g.font = '600 12px ' + FONT;
   g.fillStyle = 'rgba(150,205,235,0.5)';
