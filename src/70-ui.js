@@ -108,7 +108,15 @@ function checkForUpdate() {
           }));
         }
         Promise.all(jobs).then(function () {
-          setTimeout(function () { location.reload(); }, 500);
+          setTimeout(function () {
+            try {
+              var u = new URL(location.href);
+              u.searchParams.set('v', String(Date.now()));
+              location.replace(u.toString());
+            } catch (e) {
+              location.reload();
+            }
+          }, 500);
         });
       } else {
         if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
