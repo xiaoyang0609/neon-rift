@@ -4,6 +4,7 @@
    ========================================================= */
 
 var TAU = Math.PI * 2;
+var APP_VERSION = 'v3.4.2';
 var SIM_HZ = 120;
 var STEP = 1 / SIM_HZ;
 var MAX_STEPS = 8;

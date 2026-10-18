@@ -191,6 +191,7 @@ body {
    ========================================================= */
 
 var TAU = Math.PI * 2;
+var APP_VERSION = 'v3.4.2';
 var SIM_HZ = 120;
 var STEP = 1 / SIM_HZ;
 var MAX_STEPS = 8;
@@ -2876,7 +2877,58 @@ function buildSettingsPanel() {
       (waiting ? '按一个键…' : keyLabel(settings.bindings[a.id])) + '</button></div>';
   }
 
+  h += '<div class="section-title">关于 / ABOUT</div>';
+  h += '<div class="row"><div class="label">版本<small>' + APP_VERSION +
+    (isStandalone() ? ' · 已安装' : '') + '</small></div>' +
+    '<button class="bind" data-action="update">检查更新</button></div>';
+
   elSettingsBody.innerHTML = h;
+}
+
+function checkForUpdate() {
+  if (location.protocol === 'file:') {
+    showToast('本地文件版本，请到网页版检查更新');
+    return;
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    showToast('当前离线，联网后再试');
+    return;
+  }
+  showToast('正在检查更新…');
+
+  fetch('./index.html?ts=' + Date.now(), { cache: 'no-store' })
+    .then(function (res) { return res.text(); })
+    .then(function (text) {
+      var m = text.match(/var APP_VERSION = '([^']+)'/);
+      var remote = m ? m[1] : '';
+      if (remote && remote !== APP_VERSION) {
+        showToast('发现 ' + remote + '，正在更新…');
+        var jobs = [];
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+          jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          }));
+        }
+        if (typeof caches !== 'undefined') {
+          jobs.push(caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          }));
+        }
+        Promise.all(jobs).then(function () {
+          setTimeout(function () { location.reload(); }, 500);
+        });
+      } else {
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistration().then(function (r) {
+            if (r) r.update();
+          });
+        }
+        showToast('已是最新版本 ' + APP_VERSION);
+      }
+    })
+    .catch(function () {
+      showToast('检查失败，请稍后再试');
+    });
 }
 
 function syncSettingsUI() {
@@ -3026,6 +3078,11 @@ function refreshSettings() {
 function onPanelClick(e) {
   var t = e.target;
   if (!t || !t.getAttribute) return;
+  var action = t.getAttribute('data-action');
+  if (action === 'update') {
+    checkForUpdate();
+    return;
+  }
   var toggle = t.getAttribute('data-toggle');
   if (toggle) {
     settings[toggle] = !settings[toggle];
