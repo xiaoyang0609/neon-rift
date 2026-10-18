@@ -6,6 +6,33 @@
 
 单文件 Canvas 2D 街机射击小游戏。产物是仓库根目录的 `index.html`，双击即可玩，不依赖网络、不依赖任何第三方库。
 
+## 安装到桌面 / 手机
+
+这是 PWA（渐进式 Web 应用），不需要应用商店，也不依赖 Node：
+
+**Android（Chrome / Edge）**
+
+1. 浏览器打开 <https://xiaoyang0609.github.io/neon-rift/>
+2. 右上角 `⋮` →「安装应用」或「添加到主屏幕」
+3. 之后从桌面图标打开，全屏运行；首次加载后断网也能玩
+
+**iPhone / iPad（Safari）**
+
+1. Safari 打开同一个网址
+2. 底部「分享」→「添加到主屏幕」
+
+**Windows / macOS（Chrome / Edge）**
+
+1. 打开网址
+2. 点地址栏右侧的「安装」图标（显示器 + 箭头），或菜单 →「安装 NEON RIFT」
+3. 会以独立窗口运行，像本地 App 一样
+
+**离线**：首次加载后 Service Worker 会缓存 `index.html`、图标和 manifest，断网也能启动；联网时会自动更新。
+
+**下载单文件**：在 GitHub 打开 `index.html`，点右上角 **Download raw file**，保存后双击即玩；手机端也可以下载到文件管理器再用浏览器打开。
+
+> 目前没有 `.exe` / `.apk` 安装包：项目是纯前端单文件，PWA 安装已经等价于桌面/手机 App。如果确实需要原生安装包，可以后续用 Tauri 打包桌面版，或用 Bubblewrap 把 PWA 转成 APK。
+
 ## 玩法结构
 
 主界面先选 **关卡** 和 **射击模式**，再点「开始任务」。战役关卡按数字顺序排列，**通关上一关才会解锁下一关**：
@@ -62,6 +89,9 @@
 ```
 neon-rift/
   index.html          构建产物：单文件游戏，双击即玩
+  manifest.webmanifest  PWA 清单
+  sw.js               Service Worker（离线缓存）
+  icons/              PWA 图标 192 / 512 / maskable
   build.mjs           构建脚本：把 src/ 拼成单个 HTML
   docs/
     git-playbook.md   Git 上手指南（含三个练习）
