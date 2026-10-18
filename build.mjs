@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.join(here, 'src');
 const repoOut = path.join(here, 'index.html');
-const previewOut = path.join(here, '..', 'neon-rift.html');
 
 const template = fs.readFileSync(path.join(src, 'template.html'), 'utf8');
 const css = fs.readFileSync(path.join(src, 'style.css'), 'utf8');
@@ -34,6 +33,4 @@ const html = template
   .replace('/*__JS__*/', () => wrapped);
 
 fs.writeFileSync(repoOut, html);
-fs.writeFileSync(previewOut, html);
 console.log('built', repoOut, (html.length / 1024).toFixed(1) + ' KB', 'from', files.length, 'modules');
-console.log('preview copy ->', previewOut);
