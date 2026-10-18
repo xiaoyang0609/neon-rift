@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    name: Build & smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build
+        run: node build.mjs
+
+      - name: Verify index.html is up to date
+        run: |
+          if ! git diff --quiet -- index.html; then
+            echo "::error::index.html 与源码不一致，请在本地运行 node build.mjs 后一起提交"
+            git diff --stat -- index.html
+            exit 1
+          fi
+
+      - name: Smoke test
+        run: node test/smoke.mjs
