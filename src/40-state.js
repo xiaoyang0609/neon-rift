@@ -234,13 +234,15 @@ function startWave(n) {
   wave = n;
   waveActive = true;
   waveStartTime = time;
-  var isBoss = n > stageCfg.waves;
-  bannerText = isBoss ? ('BOSS · ' + stageCfg.bossName) : ('WAVE ' + n + ' / ' + (stageCfg.waves + 1));
+  var isBoss = stageCfg.endless ? (n % 5 === 0) : (n > stageCfg.waves);
+  bannerText = isBoss
+    ? ('BOSS · ' + stageCfg.bossName)
+    : (stageCfg.endless ? ('WAVE ' + n) : ('WAVE ' + n + ' / ' + (stageCfg.waves + 1)));
   banner = 2.4;
   var count;
   if (n === 1) count = 2;
   else if (isBoss) count = 1;
-  else count = Math.round(Math.min(26, 2 + Math.floor(n * 1.5)) * stageCfg.spawn);
+  else count = Math.min(30, Math.round(Math.min(26, 2 + Math.floor(n * 1.5)) * stageCfg.spawn));
   waveSpawn.left = count;
   waveSpawn.timer = isBoss ? 1.8 : 0.9;
   waveSpawn.interval = Math.max(0.26, (0.95 - n * 0.04) / (1 + stageIndex * 0.08));

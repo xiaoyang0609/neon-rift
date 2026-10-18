@@ -35,6 +35,13 @@ var STAGES = [
     bossHp: 1.6, bossVariant: 2, bossName: 'RIFT CORE',
     tint: '#ff4d5e',
     desc: '高压弹幕 · 8 波 + 核心'
+  },
+  {
+    name: '无尽', en: 'ENDLESS', waves: 0, endless: true,
+    hp: 1.4, speed: 1.12, dmg: 1.2, spawn: 1.3,
+    bossHp: 1.7, bossVariant: 2, bossName: 'RIFT CORE',
+    tint: '#ffd166',
+    desc: '无限波次 · 每 5 波 Boss'
   }
 ];
 
