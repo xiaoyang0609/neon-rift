@@ -28,13 +28,13 @@ body {
 .iconbtn:hover { border-color: rgba(90, 220, 255, .7); color: #eaf6ff; background: rgba(14, 40, 66, .75); }
 .iconbtn:active { transform: scale(.94); }
 
-#settings {
+#settings, #upgrades {
   position: fixed; inset: 0; z-index: 40;
   display: flex; align-items: center; justify-content: center;
   background: rgba(2, 5, 10, .66); backdrop-filter: blur(6px);
   padding: 20px;
 }
-#settings.hidden { display: none; }
+#settings.hidden, #upgrades.hidden { display: none; }
 .panel {
   width: min(560px, 100%); max-height: 84vh; overflow-y: auto;
   background: linear-gradient(160deg, rgba(10, 26, 44, .96), rgba(5, 12, 22, .97));
@@ -72,8 +72,15 @@ body {
   color: #cfeeff; font-family: inherit; font-size: 12px;
 }
 .bind:hover { border-color: rgba(90, 220, 255, .7); }
+.bind:disabled { opacity: .38; cursor: not-allowed; }
 .bind.waiting { border-color: #ffd166; color: #ffd166; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: .45; } }
+.shards {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 12px; letter-spacing: .18em; color: rgba(150, 210, 240, .6);
+  margin-bottom: 8px;
+}
+.shards b { font-size: 22px; letter-spacing: .04em; color: #ffd166; font-weight: 700; }
 .panel-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .panel-foot button {
   padding: 9px 18px; border-radius: 9px; cursor: pointer; font-family: inherit;
