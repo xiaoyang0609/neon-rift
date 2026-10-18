@@ -61,7 +61,15 @@ git remote -v
 
 ### 3.1 动手改
 
-用记事本 / VS Code 打开 `README.md`，把标题「## 构建」改成「## 本地构建」，保存。
+用记事本 / VS Code 打开 `README.md`，在文件末尾新增两行：
+
+```markdown
+## 反馈
+
+问题请开 Issue。
+```
+
+保存。
 
 ### 3.2 看 Git 发现了什么
 
