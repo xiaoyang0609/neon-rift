@@ -1,6 +1,8 @@
 # NEON RIFT · 霓虹裂隙
 
-![CI](https://github.com/xiaoyang0609/neon-rift/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/xiaoyang0609/neon-rift/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoyang0609/neon-rift/actions/workflows/ci.yml)
+
+**在线试玩：<https://xiaoyang0609.github.io/neon-rift/>**
 
 单文件 Canvas 2D 街机射击小游戏。产物是仓库根目录的 `index.html`，双击即可玩，不依赖网络、不依赖任何第三方库。
 
