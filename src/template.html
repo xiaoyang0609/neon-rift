@@ -4,6 +4,13 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <title>NEON RIFT · 霓虹裂隙</title>
+<meta name="theme-color" content="#03060d"/>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="./icons/icon-192.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="NEON RIFT"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <style>/*__CSS__*/</style>
 </head>
 <body>
@@ -46,5 +53,14 @@
 <div id="toast" class="hidden"></div>
 
 <script>/*__JS__*/</script>
+<script>
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol === 'file:') return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+})();
+</script>
 </body>
 </html>
