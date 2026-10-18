@@ -1,5 +1,5 @@
-/* NEON RIFT service worker：首次访问缓存核心资源，之后可离线启动 */
-const CACHE = 'neon-rift-v1';
+﻿/* NEON RIFT service worker：首次访问缓存核心资源，之后可离线启动 */
+const CACHE = 'neon-rift-v2';
 const CORE = [
   './',
   './index.html',
@@ -53,3 +53,4 @@ self.addEventListener('fetch', (event) => {
     }))
   );
 });
+

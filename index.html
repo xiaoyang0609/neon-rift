@@ -191,7 +191,7 @@ body {
    ========================================================= */
 
 var TAU = Math.PI * 2;
-var APP_VERSION = 'v3.4.4';
+var APP_VERSION = 'v3.4.5';
 var SIM_HZ = 120;
 var STEP = 1 / SIM_HZ;
 var MAX_STEPS = 8;
@@ -409,6 +409,7 @@ function applySimRate() {
 }
 
 applySimRate();
+
 
 
 /* ---- 05-canvas.js ---- */
@@ -2916,7 +2917,15 @@ function checkForUpdate() {
           }));
         }
         Promise.all(jobs).then(function () {
-          setTimeout(function () { location.reload(); }, 500);
+          setTimeout(function () {
+            try {
+              var u = new URL(location.href);
+              u.searchParams.set('v', String(Date.now()));
+              location.replace(u.toString());
+            } catch (e) {
+              location.reload();
+            }
+          }, 500);
         });
       } else {
         if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
